@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>爱心</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+    }
+
+    html,
+    body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: radial-gradient(circle at center, #fff0f6, #1b1020);
+      font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+    }
+
+    body.hide-cursor,
+    body.hide-cursor * {
+      cursor: none !important;
+    }
+
+    #startBtn {
+      position: fixed;
+      left: 50%;
+      top: 50%;
+      z-index: 9999;
+      transform: translate(-50%, -50%);
+      border: none;
+      border-radius: 999px;
+      padding: 18px 46px;
+      font-size: 30px;
+      font-weight: 900;
+      color: #fff;
+      background: linear-gradient(135deg, #ff4d8d, #ff1744);
+      box-shadow: 0 18px 60px rgba(255, 23, 68, 0.55);
+      letter-spacing: 2px;
+      transition: transform 0.25s ease, opacity 0.35s ease;
+    }
+
+    #startBtn:hover {
+      transform: translate(-50%, -50%) scale(1.08);
+    }
+
+    #startBtn.hide {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    #stage {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      perspective: 1000px;
+      transform: translateZ(0);
+    }
+
+    .mini-window {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 158px;
+      height: 92px;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow:
+        0 12px 32px rgba(0, 0, 0, 0.25),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.32);
+      will-change: transform, opacity, filter;
+      transform: translate3d(-9999px, -9999px, 0);
+      opacity: 0;
+      backface-visibility: hidden;
+    }
+
+    .title-bar {
+      height: 24px;
+      background: rgba(18, 18, 24, 0.92);
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding: 0 8px;
+      gap: 6px;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #222;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+    }
+
+    .dot.min {
+      background: #3a3a3a;
+    }
+
+    .dot.max {
+      background: #2c2c2c;
+    }
+
+    .dot.close {
+      background: #151515;
+    }
+
+    .content {
+      height: calc(100% - 24px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 8px 10px;
+      font-size: 21px;
+      line-height: 1.15;
+      font-weight: 900;
+      color: rgba(255, 255, 255, 0.96);
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
+    }
+
+    #loveText {
+      position: fixed;
+      left: 50%;
+      top: 47%;
+      z-index: 1000;
+      transform: translate(-50%, -50%) scale(0.72);
+      opacity: 0;
+      text-align: center;
+      pointer-events: none;
+      filter: blur(18px);
+      will-change: transform, opacity, filter;
+    }
+
+    #loveText .main {
+      font-size: clamp(58px, 11vw, 168px);
+      font-weight: 1000;
+      letter-spacing: 0.08em;
+      color: #fff;
+      text-shadow:
+        0 0 12px rgba(255, 255, 255, 0.95),
+        0 0 28px rgba(255, 72, 128, 0.95),
+        0 0 68px rgba(255, 23, 68, 0.85),
+        0 16px 55px rgba(0, 0, 0, 0.45);
+      white-space: nowrap;
+    }
+
+    #loveText .by {
+      margin-top: 18px;
+      font-size: clamp(18px, 2.8vw, 42px);
+      font-weight: 800;
+      letter-spacing: 0.18em;
+      color: rgba(255, 255, 255, 0.92);
+      text-shadow:
+        0 0 12px rgba(255, 255, 255, 0.75),
+        0 0 28px rgba(255, 72, 128, 0.75);
+    }
+
+    .soft-vignette {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at center, transparent 0%, rgba(255, 72, 128, 0.08) 34%, rgba(0, 0, 0, 0.48) 100%);
+      z-index: 900;
+      opacity: 0;
+      transition: opacity 1.2s ease;
+    }
+
+    .soft-vignette.show {
+      opacity: 1;
+    }
+  </style>
+</head>
+
+<body>
+  <button id="startBtn">start</button>
+
+  <div id="stage"></div>
+
+  <div class="soft-vignette" id="vignette"></div>
+
+  <div id="loveText">
+    <div class="main" id="mainLove">爱你XXX</div>
+    <div class="by" id="byText">by XXX</div>
+  </div>
+
+  <script>
+    // ====== 这里改名字 ======
+    const GIRL_NAME = "XXX";
+    const BY_NAME = "XXX";
+
+    // ====== 动画参数 ======
+    const COUNT = 100;
+    const HEART_TIME = 5000;
+    const WALL_TIME = 5000;
+    const TEXT_TIME = 5000;
+
+    const phrases = [
+      "今天也要开心",
+      "记得喝水",
+      "别熬夜啦",
+      "好好吃饭",
+      "抱抱你",
+      "辛苦啦宝宝",
+      "想你了",
+      "注意休息",
+      "你最可爱",
+      "慢慢来",
+      "我在呢",
+      "天气冷多穿点",
+      "别太累",
+      "要照顾好自己",
+      "你超棒",
+      "每天都爱你",
+      "给你小心心",
+      "想见你",
+      "你值得最好",
+      "别皱眉",
+      "开心一点",
+      "晚安好梦",
+      "早安宝贝",
+      "要乖乖的",
+      "我超喜欢你"
+    ];
+
+    const colors = [
+      "#ff4d8d", "#ff6b6b", "#ff8fab", "#ff5c8a",
+      "#f783ac", "#e64980", "#d6336c", "#c2255c",
+      "#845ef7", "#9775fa", "#5c7cfa", "#339af0",
+      "#22b8cf", "#20c997", "#51cf66", "#fcc419",
+      "#ff922b", "#ff758f", "#fb6f92", "#f06595"
+    ];
+
+    const stage = document.getElementById("stage");
+    const startBtn = document.getElementById("startBtn");
+    const loveText = document.getElementById("loveText");
+    const mainLove = document.getElementById("mainLove");
+    const byText = document.getElementById("byText");
+    const vignette = document.getElementById("vignette");
+
+    mainLove.textContent = `爱你${GIRL_NAME}`;
+    byText.textContent = `by ${BY_NAME}`;
+
+    const cards = [];
+    let started = false;
+    let startAt = 0;
+    let rafId = 0;
+
+    function rand(min, max) {
+      return Math.random() * (max - min) + min;
+    }
+
+    function pick(arr) {
+      return arr[Math.floor(Math.random() * arr.length)];
+    }
+
+    function clamp(v, min, max) {
+      return Math.max(min, Math.min(max, v));
+    }
+
+    function easeInOutCubic(t) {
+      return t < 0.5
+        ? 4 * t * t * t
+        : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    }
+
+    function easeOutCubic(t) {
+      return 1 - Math.pow(1 - t, 3);
+    }
+
+    function easeOutBack(t) {
+      const c1 = 1.70158;
+      const c3 = c1 + 1;
+      return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+    }
+
+    function createCard(i) {
+      const el = document.createElement("div");
+      el.className = "mini-window";
+
+      const bar = document.createElement("div");
+      bar.className = "title-bar";
+
+      const min = document.createElement("span");
+      min.className = "dot min";
+
+      const max = document.createElement("span");
+      max.className = "dot max";
+
+      const close = document.createElement("span");
+      close.className = "dot close";
+
+      bar.appendChild(min);
+      bar.appendChild(max);
+      bar.appendChild(close);
+
+      const content = document.createElement("div");
+      content.className = "content";
+      content.textContent = pick(phrases);
+      content.style.background = `linear-gradient(135deg, ${pick(colors)}, ${pick(colors)})`;
+
+      el.appendChild(bar);
+      el.appendChild(content);
+      stage.appendChild(el);
+
+      return {
+        el,
+        i,
+        w: 158,
+        h: 92,
+        heartX: 0,
+        heartY: 0,
+        wallX: 0,
+        wallY: 0,
+        startX: 0,
+        startY: 0,
+        rotHeart: rand(-10, 10),
+        rotWall: rand(-24, 24),
+        scaleHeart: rand(0.78, 1.05),
+        scaleWall: rand(0.72, 1.12),
+        delay: i / COUNT * 0.42
+      };
+    }
+
+    function layoutTargets() {
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+
+      const centerX = vw / 2;
+      const centerY = vh / 2;
+
+      const scale = Math.min(vw, vh) / 38;
+
+      cards.forEach((card, i) => {
+        const t = Math.PI * 2 * i / COUNT;
+
+        // 经典爱心曲线
+        const x = 16 * Math.pow(Math.sin(t), 3);
+        const y = -(
+          13 * Math.cos(t) -
+          5 * Math.cos(2 * t) -
+          2 * Math.cos(3 * t) -
+          Math.cos(4 * t)
+        );
+
+        card.heartX = centerX + x * scale;
+        card.heartY = centerY + y * scale;
+
+        card.startX = centerX + rand(-28, 28);
+        card.startY = centerY + rand(-28, 28);
+
+        const marginX = 80;
+        const marginY = 50;
+
+        card.wallX = rand(marginX, Math.max(marginX, vw - marginX));
+        card.wallY = rand(marginY, Math.max(marginY, vh - marginY));
+      });
+    }
+
+    function setCard(card, x, y, scale, rotate, opacity, blur = 0) {
+      card.el.style.opacity = opacity;
+      card.el.style.filter = blur ? `blur(${blur}px)` : "blur(0px)";
+      card.el.style.transform =
+        `translate3d(${x - card.w / 2}px, ${y - card.h / 2}px, 0) ` +
+        `rotate(${rotate}deg) scale(${scale})`;
+    }
+
+    function animate(now) {
+      const elapsed = now - startAt;
+
+      if (elapsed <= HEART_TIME) {
+        // 0~5秒：100个小窗口从中心慢慢画出爱心
+        const globalP = clamp(elapsed / HEART_TIME, 0, 1);
+
+        cards.forEach((card) => {
+          const localP = clamp((globalP - card.delay) / (1 - card.delay), 0, 1);
+          const p = easeOutCubic(localP);
+
+          const x = card.startX + (card.heartX - card.startX) * p;
+          const y = card.startY + (card.heartY - card.startY) * p;
+          const s = 0.18 + (card.scaleHeart - 0.18) * p;
+          const r = card.rotHeart * p;
+          const o = clamp(localP * 1.5, 0, 1);
+
+          setCard(card, x, y, s, r, o);
+        });
+      } else if (elapsed <= HEART_TIME + WALL_TIME) {
+        // 5~10秒：已有元素随机铺满整个画面
+        const pRaw = clamp((elapsed - HEART_TIME) / WALL_TIME, 0, 1);
+        const p = easeInOutCubic(pRaw);
+
+        cards.forEach((card) => {
+          const x = card.heartX + (card.wallX - card.heartX) * p;
+          const y = card.heartY + (card.wallY - card.heartY) * p;
+          const s = card.scaleHeart + (card.scaleWall - card.scaleHeart) * p;
+          const r = card.rotHeart + (card.rotWall - card.rotHeart) * p;
+
+          setCard(card, x, y, s, r, 1);
+        });
+      } else {
+        // 10~15秒：背景墙中自然冒出“爱你XXX / by XXX”
+        const pRaw = clamp((elapsed - HEART_TIME - WALL_TIME) / TEXT_TIME, 0, 1);
+        const p = easeOutBack(pRaw);
+        const glow = easeOutCubic(pRaw);
+
+        vignette.classList.add("show");
+
+        cards.forEach((card, idx) => {
+          const floatX = Math.sin((elapsed * 0.0012) + idx) * 7;
+          const floatY = Math.cos((elapsed * 0.0011) + idx * 0.7) * 7;
+          const pulse = 0.96 + Math.sin(elapsed * 0.002 + idx) * 0.025;
+
+          setCard(
+            card,
+            card.wallX + floatX,
+            card.wallY + floatY,
+            card.scaleWall * pulse,
+            card.rotWall,
+            0.42 + Math.sin(elapsed * 0.0015 + idx) * 0.1,
+            0.2
+          );
+        });
+
+        loveText.style.opacity = clamp(glow * 1.15, 0, 1);
+        loveText.style.filter = `blur(${(1 - glow) * 18}px)`;
+        loveText.style.transform =
+          `translate(-50%, calc(-50% + ${(1 - glow) * 58}px)) scale(${0.72 + 0.28 * p})`;
+      }
+
+      if (elapsed < HEART_TIME + WALL_TIME + TEXT_TIME + 100000) {
+        rafId = requestAnimationFrame(animate);
+      }
+    }
+
+    function start() {
+      if (started) return;
+      started = true;
+
+      document.body.classList.add("hide-cursor");
+      startBtn.classList.add("hide");
+
+      for (let i = 0; i < COUNT; i++) {
+        cards.push(createCard(i));
+      }
+
+      layoutTargets();
+
+      startAt = performance.now();
+      rafId = requestAnimationFrame(animate);
+    }
+
+    startBtn.addEventListener("click", start);
+
+    window.addEventListener("resize", () => {
+      if (!started) return;
+      layoutTargets();
+    });
+  </script>
+</body>
+</html>
